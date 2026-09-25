@@ -1,5 +1,8 @@
 node_modules/
 dist/
+dist-pages/
+.idea/
+*.egg-info/
 venv/
 .venv/
 __pycache__/
@@ -8,5 +11,6 @@ test-results/
 playwright-report/
 *.npy
 *.npz
+*.rsom
 public/data/private/
 .local-https/

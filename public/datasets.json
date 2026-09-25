@@ -1,4 +1,5 @@
 [
+  {"id":"lfov-lite","volumeId":"lfov","volumeName":"LFOV (2× downsampled)","resolution":"light","name":"LFOV · Light","description":"LFOV reconstruction; every second voxel on each axis, equal source spacing assumed in voxel units.","manifest":"data/private/lfov-lite/manifest.json"},
   {"id":"recon-lite","volumeId":"recon","volumeName":"vol","resolution":"light","name":"vol · Light","description":"Real skin reconstruction; equal voxel spacing assumed, +z points deeper into skin.","manifest":"data/private/recon-lite/manifest.json"},
   {"id":"recon","volumeId":"recon","volumeName":"vol","resolution":"full","name":"vol · Full","description":"Real skin reconstruction at full resolution; equal voxel spacing assumed, +z points deeper into skin.","manifest":"data/private/recon/manifest.json","fallback":"recon-lite"}
 ]

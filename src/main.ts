@@ -21,7 +21,7 @@ document.querySelector('#app')!.innerHTML = `
       <section class="control-section channels"><div class="section-label">Channels</div><button class="channel-toggle red" id="toggle-0" aria-pressed="true"><span class="channel-dot"></span><span>Low frequency<small>Red channel</small></span><span class="switch"></span></button><button class="channel-toggle green" id="toggle-1" aria-pressed="true"><span class="channel-dot"></span><span>High frequency<small>Green channel</small></span><span class="switch"></span></button></section>
       <section class="crop-section"><div class="range-heading"><span>Depth window <span id="depth-axis">· z</span></span><output id="crop-value">Full depth</output></div><div id="depth-range"></div><div class="depth-values"><output id="crop-start-value">0</output><output id="crop-end-value">1</output></div></section>
       <details id="technical"><summary>Fine-tune the image <span>＋</span></summary><div id="channel-settings"></div></details>
-      <details id="offline-panel"><summary>Take it offline <span>↓</span></summary><p class="muted">Select the volumes to keep on this iPad.</p><div id="offline-datasets"></div><button id="prepare" class="primary">Prepare for offline use</button><p id="offline-status" class="technical-note" role="status">Checking offline support…</p><button id="update" class="hidden">Install app update & reload</button></details>
+      <details id="offline-panel"><summary>Take it offline <span>↓</span></summary><p class="muted">Select server volumes to keep, or prepare just the app for files stored on this iPad.</p><div id="offline-datasets"></div><button id="prepare" class="primary">Prepare for offline use</button><p id="offline-status" class="technical-note" role="status">Checking offline support…</p><button id="update" class="hidden">Install app update & reload</button></details>
     </aside>
   </main>`;
 
@@ -32,6 +32,7 @@ let viewer: VolumeViewer | undefined, datasets: Dataset[] = [], selected: Datase
 let manifest: Manifest | undefined, abort: AbortController | undefined, loadGeneration = 0, offlineAvailable = false;
 const validationMode = new URLSearchParams(location.search).has('validation');
 const localMode = new URLSearchParams(location.search).has('local');
+const viewerOnly = import.meta.env.MODE === 'pages';
 let localFile: File | undefined;
 const localDataset: Dataset = { id: 'local-file', name: 'From Files', description: '', manifest: '' };
 const volumeId = (dataset: Dataset) => dataset.volumeId || dataset.id;
@@ -101,8 +102,10 @@ function updateResolution(dataset: Dataset) {
     button.setAttribute('aria-pressed', String(dataset.resolution === button.dataset.resolution));
   });
   document.querySelector<HTMLElement>('.resolution')!.hidden = dataset === localDataset;
-  $<HTMLButtonElement>('prepare').disabled = dataset === localDataset || !offlineAvailable;
-  if (dataset === localDataset) $('offline-status').textContent = 'Files opened from this iPad are not included in offline preparation. Over LAN HTTP, the computer must serve the app again after a reload. No certificate is needed for this connected mode.';
+  $<HTMLButtonElement>('prepare').disabled = !offlineAvailable;
+  if (dataset === localDataset) $('offline-status').textContent = offlineAvailable
+    ? 'Prepare the app for offline use. Keep your .rsom files in On My iPad and select one after each launch.'
+    : 'Over LAN HTTP, the computer must serve the app again after a reload. Offline app preparation requires trusted HTTPS.';
   else if (!offlineAvailable && !isSecureContext) $('offline-status').textContent = 'HTTP viewing works while connected to the computer. Offline app preparation requires trusted HTTPS.';
 }
 
@@ -141,7 +144,7 @@ async function loadDataset(dataset: Dataset) {
     setView('front'); $('loading').classList.add('hidden');
     document.body.dataset.ready = dataset.id;
     if (local) $('local-status').textContent = `${file!.name} — read on this device, not uploaded. Select it again after reloading the app.`;
-    else void checkOffline();
+    void checkOffline();
   } catch (error) { if (generation === loadGeneration && !(error instanceof DOMException && error.name === 'AbortError')) showError(errorMessage(error)); }
 }
 
@@ -180,31 +183,31 @@ document.querySelectorAll<HTMLButtonElement>('[data-resolution]').forEach(button
 $('retry').addEventListener('click', () => { if (selected) void loadDataset(selected); else location.reload(); });
 $('fallback').addEventListener('click', () => { const d = datasets.find(d => d.id === selected?.fallback); if (d) void loadDataset(d); });
 $('update').addEventListener('click', activateUpdate);
-function offlineSelection() { return [...document.querySelectorAll<HTMLInputElement>('.offline-choice:checked')].map(i => localURL(i.value, document.baseURI)); }
+function offlineSelection() { if (selected === localDataset) return []; return [...document.querySelectorAll<HTMLInputElement>('.offline-choice:checked')].map(i => localURL(i.value, document.baseURI)); }
 async function checkOffline() {
-  if (!offlineAvailable || selected === localDataset) return;
-  try { const result = await offlineRequest('STATUS', offlineSelection(), message => { if (selected !== localDataset) $('offline-status').textContent = message; }); if (selected !== localDataset) $('offline-status').textContent = result.message; }
-  catch (error) { if (selected !== localDataset) $('offline-status').textContent = errorMessage(error); }
+  if (!offlineAvailable) return;
+  const current = selected;
+  try { const result = await offlineRequest('STATUS', offlineSelection(), message => { if (selected === current) $('offline-status').textContent = message; }); if (selected === current) $('offline-status').textContent = result.message; }
+  catch (error) { if (selected === current) $('offline-status').textContent = errorMessage(error); }
 }
 $('prepare').addEventListener('click', async () => {
   const button = $<HTMLButtonElement>('prepare'); button.disabled = true;
   const choices = [...document.querySelectorAll<HTMLInputElement>('.offline-choice')]; choices.forEach(c => c.disabled = true);
   try {
     if (!offlineAvailable) throw new Error('Offline preparation needs a production build served over trusted HTTPS. See the README setup instructions.');
-    if (!offlineSelection().length) throw new Error('Select at least one dataset to prepare.');
     const result = await offlineRequest('PREPARE', offlineSelection(), message => { $('offline-status').textContent = message; });
     $('offline-status').textContent = result.message;
   } catch (error) { $('offline-status').textContent = `Not ready offline. ${errorMessage(error)}`; }
-  finally { button.disabled = selected === localDataset || !offlineAvailable; choices.forEach(c => c.disabled = false); }
+  finally { button.disabled = !offlineAvailable; choices.forEach(c => c.disabled = false); }
 });
 
 async function start() {
   try {
     const response = await fetch('./datasets.json'); if (!response.ok) throw new Error('Dataset catalog could not load. Reconnect to the setup server.');
     datasets = await response.json();
-    if (!Array.isArray(datasets) || !datasets.length || datasets.some(d => !d.id || !d.name || !d.manifest)) throw new Error('datasets.json must contain a nonempty list of dataset definitions.');
+    if (!Array.isArray(datasets) || datasets.some(d => !d.id || !d.name || !d.manifest)) throw new Error('datasets.json must contain a list of dataset definitions.');
     // Keep synthetic fixtures available only in explicitly requested diagnostic mode.
-    if (validationMode) datasets.push(
+    if (validationMode && !viewerOnly) datasets.push(
       { id: 'demo', volumeId: 'demo', volumeName: 'Synthetic test volume', resolution: 'full', name: 'Synthetic test · Full', description: '', manifest: 'data/demo/manifest.json', fallback: 'demo-lite' },
       { id: 'demo-lite', volumeId: 'demo', volumeName: 'Synthetic test volume', resolution: 'light', name: 'Synthetic test · Light', description: '', manifest: 'data/demo-lite/manifest.json' }
     );
@@ -221,23 +224,29 @@ async function start() {
         void checkOffline();
       }); label.append(choice, document.createTextNode(d.name)); $('offline-datasets').append(label);
     });
-    if (localMode || remember('rsom-last-dataset') === localDataset.id) {
+    if (!datasets.length || localMode || remember('rsom-last-dataset') === localDataset.id) {
       datasets.push(localDataset);
       $<HTMLSelectElement>('dataset').add(new Option('From Files', localDataset.id));
       selected = localDataset; updateResolution(localDataset);
       $('loading').classList.add('hidden');
       $('local-status').textContent = 'Choose a .rsom volume from On My iPad. Select it again each time you open or reload this page.';
-    } else await loadDataset(datasets.find(d => d.id === remember('rsom-last-dataset')) || datasets[0]);
+    } else {
+      const saved = datasets.find(d => d.id === remember('rsom-last-dataset'));
+      const initial = validationMode
+        ? datasets.find(d => d.id === (saved?.volumeId === 'demo' ? saved.id : 'demo'))!
+        : saved || datasets[0];
+      await loadDataset(initial);
+    }
     try {
       await registerOffline(() => { $('update').classList.remove('hidden'); $('offline-status').textContent = 'An app update is available. Install it while online, then prepare your datasets again.'; });
       offlineAvailable = true; if (selected) updateResolution(selected); await checkOffline();
-    } catch (error) { if (selected !== localDataset) $('offline-status').textContent = errorMessage(error); }
+    } catch (error) { $('offline-status').textContent = errorMessage(error); }
   } catch (error) { showError(errorMessage(error)); }
 }
 void start();
 
 // Explicit opt-in diagnostic harness for the automated GPU comparison.
-if (validationMode) {
+if (validationMode && !viewerOnly) {
   Object.assign(window, { rsomValidation: {
     load: async () => loadDataset({ id: 'validation', name: 'Validation phantom', description: 'Synthetic asymmetric phantom', manifest: 'data/validation/manifest.json' }),
     pixels: () => viewer!.referencePixels(),

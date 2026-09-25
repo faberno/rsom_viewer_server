@@ -3,6 +3,9 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build && node scripts/build-sw.mjs",
+    "build:pages": "tsc --noEmit && vite build --mode pages && node scripts/pages-assets.mjs && node scripts/build-sw.mjs dist-pages && node scripts/check-pages.mjs",
+    "preview:pages": "vite preview --mode pages --host 127.0.0.1",
+    "test:pages": "playwright test --config playwright.pages.config.ts",
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test"
   },

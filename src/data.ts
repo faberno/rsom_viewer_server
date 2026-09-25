@@ -40,7 +40,14 @@ export function localURL(path: string, base = location.href): string {
 export async function getManifest(url: string, signal?: AbortSignal): Promise<Manifest> {
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error(`Could not load dataset manifest (HTTP ${response.status}). Connect to the setup server or prepare this dataset offline.`);
-  const m: Manifest = await response.json();
+  // Static hosts may return the app HTML with HTTP 200 for a missing manifest.
+  const body = await response.text();
+  if (response.headers.get('content-type')?.includes('text/html') || body.trimStart().startsWith('<')) {
+    throw new Error('This volume export is missing from the server. Add its manifest.json and volume.bin files, or use Open from Files to select an exported .rsom file. The bundled synthetic volume is available at ?validation.');
+  }
+  let m: Manifest;
+  try { m = JSON.parse(body); }
+  catch { throw new Error('The volume manifest is not valid JSON. Re-export this dataset with rsom_export.py.'); }
   validateManifest(m);
   return m;
 }

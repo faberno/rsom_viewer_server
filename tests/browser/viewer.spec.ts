@@ -8,12 +8,32 @@ async function localPhantom() {
   return Buffer.concat([header, manifest, payload]);
 }
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
   // Keep deterministic synthetic validation independent of the booth's real-data catalog.
-  await page.addInitScript(() => {
-    localStorage.setItem('rsom-last-dataset', 'demo');
+  await page.addInitScript(saved => {
+    localStorage.setItem('rsom-last-dataset', saved);
     localStorage.setItem('rsom-offline-selection', 'data/demo/manifest.json');
-  });
+  }, testInfo.title.startsWith('diagnostic startup') ? 'recon-lite' : 'demo');
+});
+
+test('diagnostic startup replaces a remembered private volume with the synthetic fixture', async ({ page }) => {
+  await page.route('**/data/private/**', route => route.abort());
+  await page.goto('/?validation');
+  await expect(page.locator('body')).toHaveAttribute('data-ready', 'demo');
+  await expect(page.locator('#error')).toBeHidden();
+});
+
+test('missing manifest HTML has an actionable error', async ({ page }) => {
+  await page.route('**/data/private/recon-lite/manifest.json', route => route.fulfill({
+    status: 200, contentType: 'text/html', body: '<!doctype html><html>App fallback</html>'
+  }));
+  await page.goto('/?validation');
+  await expect(page.locator('body')).toHaveAttribute('data-ready', 'demo');
+  await page.locator('#resolution-light').click();
+  await expect(page.locator('body')).toHaveAttribute('data-ready', 'demo-lite');
+  await page.locator('#dataset').selectOption('recon');
+  await expect(page.locator('#error-message')).toContainText('This volume export is missing');
+  await expect(page.locator('#error-message')).toContainText('Open from Files');
 });
 
 test('production GPU shader agrees with NumPy imshow MIP, including different-depth maxima', async ({ page }) => {

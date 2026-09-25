@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: './',
-  build: { rollupOptions: { output: { manualChunks: { three: ['three'] } } } }
-});
+  publicDir: mode === 'pages' ? false : 'public',
+  build: { outDir: mode === 'pages' ? 'dist-pages' : 'dist', rollupOptions: { output: { manualChunks: { three: ['three'] } } } }
+}));

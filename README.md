@@ -1,5 +1,7 @@
 # RSOM Explorer
 
+For a public viewer with volumes kept in iPad Files, see [GitHub Pages publishing and offline setup](docs/GITHUB-PAGES.md). Use `npm run build:pages`; this creates an app-only `dist-pages/` with no volume exports.
+
 A local, touch-friendly WebGL2 viewer for a conference booth. Two signals reveal a 3D volume through **independent red/green maximum-intensity projection**. No Python server or remote rendering is involved. The booth menu contains the real volume; synthetic data remains available only as explicitly labeled diagnostic fixtures.
 
 The original `view3d.py` and `recon.npy` are left untouched. This workspace now includes local full/light exports of `recon.npy`, using the requested assumption of equal voxel spacing and z as depth. See [the current iPad setup guide](docs/IPAD-RECON.md). These private exports are excluded from Git but included in local production builds; fresh clones need their own exports or the bundled synthetic datasets.
@@ -36,7 +38,7 @@ npm run preview -- --host 0.0.0.0 --port 4173 --strictPort
 
 Transfer `volume.rsom` to **On My iPad** (download from the LAN server or another file-transfer method). Open `http://COMPUTER-LAN-IP:4173/?local=1`, then **Open from Files**. The selected file is read locally, never uploaded; no server volume is fetched in this startup mode. Raw `.npy` files must be exported first. Each package contains one resolution; open another package to change resolution. File headers, layout, size, and GPU limits are checked before payload allocation/upload. The packer verifies SHA-256, but browser SHA-256 verification is available only when Web Crypto is available, not over ordinary LAN HTTP.
 
-**This mode is connected, not offline-ready.** You need the computer to open/reload the app and must select the file again after each reload. Keeping the volume in Files does not cache the app. Use a trusted private LAN: HTTP has no transport encryption or server authentication. Local imports are not included in the HTTPS service-worker preparation feature. See [step-by-step instructions and current reconstruction download links](docs/IPAD-RECON.md).
+**This mode is connected, not offline-ready.** You need the computer to open/reload the app and must select the file again after each reload. Keeping the volume in Files does not cache the app. Use a trusted private LAN: HTTP has no transport encryption or server authentication. On HTTPS, offline preparation can cache just the app; local files remain in Files and must be selected again after each reload. See [step-by-step instructions and current reconstruction download links](docs/IPAD-RECON.md).
 
 ## iPad setup and fully offline use (HTTPS)
 
@@ -50,7 +52,7 @@ Safari on an iPad cannot register this worker over plain `http://192.168.…`; t
 4. Optionally use Share → Add to Home Screen. Launch that installed app and perform/verify preparation there too; storage behavior can differ between browsing contexts. Adding the icon alone is not proof of readiness.
 5. Complete the airplane-mode checklist below on the actual target device.
 
-The app requests persistent storage when supported; Safari may decline or evict cached data. Avoid Private Browsing. Verify readiness before every booth session and after device/browser updates. Offline status checks the selected set, so selecting an unprepared dataset removes the readiness claim. Unselected datasets remain unavailable offline unless previously prepared for this version.
+The app requests persistent storage when supported; Safari may decline or evict cached data. Avoid Private Browsing. Verify readiness before every booth session and after device/browser updates. Offline status checks the selected set, so selecting an unprepared dataset removes the readiness claim. With no datasets selected, or while using From Files, it verifies only the app and explicitly reports app-only readiness. Unselected datasets remain unavailable offline unless previously prepared for this version.
 
 App updates install a new verified shell and wait for the **Install app update & reload** action. Activate updates while connected, then prepare datasets again. New versions retire old app/data caches; no previous readiness receipt is reused. Dataset changes at an existing URL require preparing again while connected. When changing catalog entries, rebuild the app so its catalog hash and worker version change. Keep hashed assets from the previous deployment available until existing clients have updated; serve `sw.js` with `Cache-Control: no-cache`.
 
