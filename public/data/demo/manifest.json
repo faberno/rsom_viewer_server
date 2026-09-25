@@ -1,0 +1,114 @@
+{
+  "format": "rsom-rg8",
+  "version": 1,
+  "name": "Vascular garden",
+  "description": "Synthetic vessel-like networks. Red shows broad structures; green reveals finer branches. Not patient data.",
+  "synthetic": true,
+  "dimensions": [
+    96,
+    64,
+    128
+  ],
+  "spacing": [
+    0.025,
+    0.035,
+    0.018
+  ],
+  "units": "mm",
+  "origin": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "axes": {
+    "arrayOrder": "xyzc",
+    "textureOrder": "zyxc",
+    "labels": [
+      "x",
+      "y",
+      "z"
+    ],
+    "depthAxis": "z",
+    "positiveDirection": "increasing input index",
+    "initialView": {
+      "lookAlong": "+y",
+      "screenRight": "-x",
+      "screenDown": "+z"
+    }
+  },
+  "channels": [
+    {
+      "name": "Low frequency",
+      "color": "red",
+      "sourceChannel": 0,
+      "exportRange": [
+        0.0,
+        1.0
+      ],
+      "defaultDisplayRange": [
+        0,
+        1
+      ],
+      "gamma": 1
+    },
+    {
+      "name": "High frequency",
+      "color": "green",
+      "sourceChannel": 1,
+      "exportRange": [
+        0.0,
+        1.0
+      ],
+      "defaultDisplayRange": [
+        0,
+        1
+      ],
+      "gamma": 1
+    }
+  ],
+  "intensityMapping": {
+    "type": "linear-clipped-uint8",
+    "rounding": "floor(t * 255 + 0.5)",
+    "nan": 0,
+    "negativeInfinity": 0,
+    "positiveInfinity": 255,
+    "constant": 0,
+    "percentiles": null
+  },
+  "source": {
+    "shape": [
+      96,
+      64,
+      128,
+      2
+    ],
+    "crop": [
+      [
+        0,
+        96
+      ],
+      [
+        0,
+        64
+      ],
+      [
+        0,
+        128
+      ]
+    ],
+    "downsample": [
+      1,
+      1,
+      1
+    ],
+    "method": "strided-decimation"
+  },
+  "data": {
+    "url": "volume.bin",
+    "type": "uint8",
+    "channels": 2,
+    "layout": "x-fastest-rg-interleaved",
+    "byteLength": 1572864,
+    "sha256": "279644c1ec98998f312c23c477878a25b47b1194a275b871452bf3be9e65e3ab"
+  }
+}

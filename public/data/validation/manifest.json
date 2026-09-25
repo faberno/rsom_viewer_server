@@ -1,0 +1,114 @@
+{
+  "format": "rsom-rg8",
+  "version": 1,
+  "name": "Asymmetric validation phantom",
+  "description": "",
+  "synthetic": true,
+  "dimensions": [
+    5,
+    7,
+    9
+  ],
+  "spacing": [
+    2.0,
+    1.0,
+    3.0
+  ],
+  "units": "mm",
+  "origin": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "axes": {
+    "arrayOrder": "xyzc",
+    "textureOrder": "zyxc",
+    "labels": [
+      "x",
+      "y",
+      "z"
+    ],
+    "depthAxis": "y",
+    "positiveDirection": "increasing input index",
+    "initialView": {
+      "lookAlong": "+y",
+      "screenRight": "-x",
+      "screenDown": "+z"
+    }
+  },
+  "channels": [
+    {
+      "name": "Low frequency",
+      "color": "red",
+      "sourceChannel": 0,
+      "exportRange": [
+        0.0,
+        1.0
+      ],
+      "defaultDisplayRange": [
+        0,
+        1
+      ],
+      "gamma": 1
+    },
+    {
+      "name": "High frequency",
+      "color": "green",
+      "sourceChannel": 1,
+      "exportRange": [
+        0.0,
+        1.0
+      ],
+      "defaultDisplayRange": [
+        0,
+        1
+      ],
+      "gamma": 1
+    }
+  ],
+  "intensityMapping": {
+    "type": "linear-clipped-uint8",
+    "rounding": "floor(t * 255 + 0.5)",
+    "nan": 0,
+    "negativeInfinity": 0,
+    "positiveInfinity": 255,
+    "constant": 0,
+    "percentiles": null
+  },
+  "source": {
+    "shape": [
+      5,
+      7,
+      9,
+      2
+    ],
+    "crop": [
+      [
+        0,
+        5
+      ],
+      [
+        0,
+        7
+      ],
+      [
+        0,
+        9
+      ]
+    ],
+    "downsample": [
+      1,
+      1,
+      1
+    ],
+    "method": "strided-decimation"
+  },
+  "data": {
+    "url": "volume.bin",
+    "type": "uint8",
+    "channels": 2,
+    "layout": "x-fastest-rg-interleaved",
+    "byteLength": 630,
+    "sha256": "00129a8fa3d0b0352e7be0ea4ac480953ea6258c8e5041ea8c72a510ed0561fa"
+  }
+}

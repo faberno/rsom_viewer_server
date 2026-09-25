@@ -1,0 +1,31 @@
+{
+	admin off
+	persist_config off
+	auto_https disable_redirects
+	skip_install_trust
+	storage file_system .local-https/storage
+	pki {
+		ca local {
+			name "RSOM iPad Offline"
+			root_cn "RSOM iPad Offline Root"
+			intermediate_cn "RSOM iPad Offline Intermediate"
+		}
+	}
+}
+
+# Keep this LAN address stable, or update both site addresses if it changes.
+https://192.168.178.91:8443 {
+	bind 192.168.178.91
+	tls internal
+	root * dist
+	header /sw.js Cache-Control "no-cache"
+	file_server
+}
+
+# Bootstrap: only the PUBLIC certificate is served here, never private keys.
+http://192.168.178.91:8080 {
+	bind 192.168.178.91
+	root * .local-https/public
+	header /rsom-root.cer Content-Type "application/x-x509-ca-cert"
+	file_server
+}
