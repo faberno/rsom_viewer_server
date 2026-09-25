@@ -3,6 +3,13 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { axisIndex, type Manifest } from './data';
 import { vertexShader, fragmentShader } from './shader';
 
+export type MotionQuality = 'performance' | 'balanced' | 'full';
+const motionProfiles = {
+  performance: { pixelScale: .6, sampleStep: 2.5 },
+  balanced: { pixelScale: .85, sampleStep: 1.5 },
+  full: { pixelScale: 1, sampleStep: 1 }
+};
+
 export class VolumeViewer {
   readonly renderer: THREE.WebGLRenderer;
   readonly camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .01, 100);
@@ -20,6 +27,7 @@ export class VolumeViewer {
   private autoTimer = 0;
   private interacting = false;
   private lowQuality = false;
+  private motionQuality: MotionQuality = 'performance';
   private auto = false;
   private pausedUntil = 0;
   private lost = false;
@@ -148,6 +156,10 @@ export class VolumeViewer {
   }
 
   setAuto(enabled: boolean) { this.auto = enabled; this.invalidate(); }
+  setMotionQuality(quality: MotionQuality) { this.motionQuality = quality; this.resize(); }
+  get renderQuality() {
+    return { pixelRatio: this.renderer.getPixelRatio(), sampleStep: this.material.uniforms.quality.value as number };
+  }
   private interaction() { this.pausedUntil = performance.now() + 2500; this.setLowQuality(true); this.settle(); }
   private settle() {
     window.clearTimeout(this.settleTimer); this.pausedUntil = performance.now() + 2500;
@@ -161,7 +173,7 @@ export class VolumeViewer {
     this.camera.top = half; this.camera.bottom = -half; this.camera.left = -half * aspect; this.camera.right = half * aspect;
     if (aspect < 1) { this.camera.left = -half; this.camera.right = half; this.camera.top /= aspect; this.camera.bottom /= aspect; }
     this.camera.updateProjectionMatrix();
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5) * (this.lowQuality ? .6 : 1));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5) * (this.lowQuality ? motionProfiles[this.motionQuality].pixelScale : 1));
     this.renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false); this.invalidate();
   }
   invalidate() { if (!this.raf && !this.lost && !document.hidden) this.raf = requestAnimationFrame(() => this.render()); }
@@ -169,7 +181,7 @@ export class VolumeViewer {
     this.raf = -1; // Suppress change-triggered frames during this render; auto-rotation is throttled below.
     const spinning = this.auto && !this.interacting && performance.now() >= this.pausedUntil;
     if (spinning) { this.controls.autoRotate = true; this.controls.update(1 / 30); this.controls.autoRotate = false; }
-    this.draw(this.camera, this.lowQuality || spinning ? 2.5 : 1);
+    this.draw(this.camera, this.lowQuality || spinning ? motionProfiles[this.motionQuality].sampleStep : 1);
     this.raf = 0;
     if (this.auto) {
       window.clearTimeout(this.autoTimer);

@@ -112,6 +112,37 @@ test('touch-sized UI, channel controls, presets, dataset switching and desktop d
   expect(errors).toEqual([]);
 });
 
+test('motion quality controls drag resolution and auto-rotation sampling and persists after reload', async ({ page }) => {
+  await page.goto('/?validation');
+  await expect(page.locator('body')).toHaveAttribute('data-ready', 'demo');
+  await page.locator('#technical summary').click();
+  const select = page.getByLabel('Quality while moving');
+  const quality = () => page.evaluate(() => (window as any).rsomValidation.renderQuality());
+  const ratio = await page.evaluate(() => Math.min(devicePixelRatio, 1.5));
+  await expect.poll(quality).toEqual({ pixelRatio: ratio, sampleStep: 1 });
+  const box = (await page.locator('#volume').boundingBox())!;
+  for (const [mode, scale, step] of [['performance', .6, 2.5], ['balanced', .85, 1.5], ['full', 1, 1]] as const) {
+    await select.selectOption(mode);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 20, box.y + box.height / 2 + 10);
+    await expect.poll(quality).toEqual({ pixelRatio: ratio * scale, sampleStep: step });
+    await page.mouse.up();
+    await expect.poll(quality).toEqual({ pixelRatio: ratio, sampleStep: 1 });
+  }
+  await select.selectOption('balanced');
+  await page.locator('#auto').click();
+  await expect.poll(quality).toEqual({ pixelRatio: ratio, sampleStep: 1.5 });
+  await select.selectOption('full');
+  await expect.poll(quality).toEqual({ pixelRatio: ratio, sampleStep: 1 });
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-ready', 'demo');
+  await expect(select).toHaveValue('full');
+  await page.locator('#resolution-light').click();
+  await expect(page.locator('body')).toHaveAttribute('data-ready', 'demo-lite');
+  await expect(select).toHaveValue('full');
+});
+
 test('two-finger pan follows the gesture, pinch still zooms, and reset recenters', async ({ page, context }) => {
   await page.goto('/?validation'); await expect(page.locator('body')).toHaveAttribute('data-ready', 'demo');
   const view = () => page.evaluate(() => (window as any).rsomValidation.viewState());

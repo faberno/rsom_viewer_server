@@ -31,7 +31,7 @@ Front looks along **+y**, with **-x screen-right** and **+z screen-down**. Shall
 
 Each orthographic ray intersects the physical volume/crop box with robust slab intersection, including parallel rays. Samples accumulate `maxima = max(maxima, texture(...).rg)` component-wise. The output is `(mapped_red_max, mapped_green_max, 0, 1)`. There is no opacity integration or shared winning voxel.
 
-Sampling uses midpoint samples at approximately one minimum voxel spacing when still, 2.5 spacings while interacting/rotating, and a maximum of 2,048 samples per ray. The cap keeps arbitrary large anisotropic volumes bounded but can miss thin peaks; this is a sampled, trilinearly interpolated MIP, not an analytic maximum. Axis-aligned voxel-centered sampling is validated; arbitrary angles can interpolate/attenuate isolated peaks. Depth cropping selects inclusive retained voxel indices. Texture coordinates are clamped to retained voxel centers so interpolation cannot include excluded voxels.
+Sampling uses midpoint samples at approximately one minimum voxel spacing when still, 2.5 spacings while interacting/rotating in Performance mode (1.5 in Balanced, 1 in Full quality), and a maximum of 2,048 samples per ray. The cap keeps arbitrary large anisotropic volumes bounded but can miss thin peaks; this is a sampled, trilinearly interpolated MIP, not an analytic maximum. Axis-aligned voxel-centered sampling is validated; arbitrary angles can interpolate/attenuate isolated peaks. Depth cropping selects inclusive retained voxel indices. Texture coordinates are clamped to retained voxel centers so interpolation cannot include excluded voxels.
 
 ## Intensity mapping
 

@@ -1,5 +1,5 @@
 import './style.css';
-import { VolumeViewer } from './viewer';
+import { VolumeViewer, type MotionQuality } from './viewer';
 import { axisIndex, getManifest, getVolume, localURL, verifyVolume, type Dataset, type Manifest } from './data';
 import { openLocalVolume, readLocalBytes } from './local-volume';
 import { activateUpdate, offlineRequest, registerOffline } from './offline';
@@ -20,7 +20,7 @@ document.querySelector('#app')!.innerHTML = `
       <section class="control-section"><div class="section-label">Perspective</div><div class="presets"><button data-view="front" class="active">Front</button><button data-view="top">Top</button><button data-view="side">Side</button></div><button id="reset" class="reset">⟲ &nbsp; Reset view</button></section>
       <section class="control-section channels"><div class="section-label">Channels</div><button class="channel-toggle red" id="toggle-0" aria-pressed="true"><span class="channel-dot"></span><span>Low frequency<small>Red channel</small></span><span class="switch"></span></button><button class="channel-toggle green" id="toggle-1" aria-pressed="true"><span class="channel-dot"></span><span>High frequency<small>Green channel</small></span><span class="switch"></span></button></section>
       <section class="crop-section"><div class="range-heading"><span>Depth window <span id="depth-axis">· z</span></span><output id="crop-value">Full depth</output></div><div id="depth-range"></div><div class="depth-values"><output id="crop-start-value">0</output><output id="crop-end-value">1</output></div></section>
-      <details id="technical"><summary>Fine-tune the image <span>＋</span></summary><div id="channel-settings"></div></details>
+      <details id="technical"><summary>Fine-tune the image <span>＋</span></summary><div id="channel-settings"></div><label class="section-label" for="motion-quality">Quality while moving</label><select id="motion-quality" aria-describedby="motion-quality-note"><option value="performance">Performance</option><option value="balanced">Balanced</option><option value="full">Full quality</option></select><p id="motion-quality-note" class="technical-note">Higher quality keeps more detail while dragging or auto-rotating, but may reduce frame rate. Full quality disables the motion quality reduction.</p></details>
       <details id="offline-panel"><summary>Take it offline <span>↓</span></summary><p class="muted">Select server volumes to keep, or prepare just the app for files stored on this iPad.</p><div id="offline-datasets"></div><button id="prepare" class="primary">Prepare for offline use</button><p id="offline-status" class="technical-note" role="status">Checking offline support…</p><button id="update" class="hidden">Install app update & reload</button></details>
     </aside>
   </main>`;
@@ -40,6 +40,16 @@ const depthRange = new DepthRange($('depth-range'), () => updateCrop());
 function remember(key: string, value?: string): string | null {
   try { if (value !== undefined) localStorage.setItem(key, value); return localStorage.getItem(key); } catch { return null; }
 }
+
+const motionQualitySelect = $<HTMLSelectElement>('motion-quality');
+const savedMotionQuality = remember('rsom-motion-quality');
+let motionQuality: MotionQuality = savedMotionQuality === 'balanced' || savedMotionQuality === 'full' ? savedMotionQuality : 'performance';
+motionQualitySelect.value = motionQuality;
+motionQualitySelect.addEventListener('change', () => {
+  motionQuality = motionQualitySelect.value as MotionQuality;
+  remember('rsom-motion-quality', motionQuality);
+  viewer?.setMotionQuality(motionQuality);
+});
 
 function setSidebarVisible(visible: boolean) {
   $('sidebar').hidden = !visible;
@@ -117,6 +127,7 @@ async function loadDataset(dataset: Dataset) {
   showProgress('Reading volume details…', 0);
   try {
     if (!viewer) viewer = new VolumeViewer($<HTMLCanvasElement>('volume'), showError, () => { if (selected) void loadDataset(selected); }, orientation);
+    viewer.setMotionQuality(motionQuality);
     const signal = abort.signal;
     const local = dataset === localDataset;
     const file = localFile;
@@ -251,6 +262,7 @@ if (validationMode && !viewerOnly) {
     load: async () => loadDataset({ id: 'validation', name: 'Validation phantom', description: 'Synthetic asymmetric phantom', manifest: 'data/validation/manifest.json' }),
     pixels: () => viewer!.referencePixels(),
     uprightPixels: () => viewer!.referencePixels(true),
+    renderQuality: () => viewer!.renderQuality,
     viewState: () => {
       viewer!.camera.updateMatrixWorld();
       return {
